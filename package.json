@@ -1,0 +1,17 @@
+{
+  "name": "sfj-functions",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "aws-sdk": "^2.848.0",
+    "typescript": "^4.2.2",
+    "webpack": "^5.23.0"
+  },
+  "scripts": {
+    "watch": "tsc -w"
+  },
+  "bin": {
+    "sfj-functions": "./index.js"
+  }
+}

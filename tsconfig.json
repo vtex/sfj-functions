@@ -1,0 +1,7 @@
+{
+  "compilerOptions": {
+    "esModuleInterop": true
+  },
+  "include": ["**/*"],
+  "exclude": ["**/*.test.ts", "**/__tests__"]
+}

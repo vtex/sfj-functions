@@ -1,0 +1,5 @@
+node_modules
+*.js
+*.d.ts
+!webpack.config.js
+!webpack.config.d.ts
