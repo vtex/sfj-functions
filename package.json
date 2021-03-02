@@ -4,9 +4,12 @@
   "main": "index.js",
   "license": "MIT",
   "dependencies": {
-    "aws-sdk": "^2.848.0",
+    "aws-sdk": "^2.853.0",
+    "glob": "^7.1.6",
+    "ts-loader": "^8.0.17",
     "typescript": "^4.2.2",
-    "webpack": "^5.23.0"
+    "webpack": "^5.24.2",
+    "zip-webpack-plugin": "^4.0.1"
   },
   "scripts": {
     "watch": "tsc -w"

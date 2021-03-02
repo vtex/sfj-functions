@@ -3,8 +3,6 @@ const path = require('path')
 const glob = require('glob')
 
 module.exports.generateConfig = (root, distDir, provider) => {
-  console.log('root', root);
-  process.chdir(root)
   const functions = []
   const config = mainConfig(root, distDir)
 
@@ -46,7 +44,7 @@ function afterEmit(root, functions, provider) {
       compiler.hooks.afterEmit.tap('Functions Deployment', async () => {
         Promise.all(
           functions.map((item) =>
-            provider.createOrUpdateFunction(path.parse(item.filename).name, item.content).catch((x) => console.error(x))
+            item.filename.endsWith('.zip') && provider.createOrUpdateFunction(path.parse(item.filename).name, item.content).catch((x) => console.error(x))
           )
         ).then(() => {
           const redirects = {}
@@ -93,7 +91,7 @@ function mainConfig(root, distDir) {
   glob.sync('api/*.[tj]s?(x)', {
     cwd: root,
   }).forEach((filename) => (
-    config.entry[path.parse(filename).name] = filename
+    config.entry[path.parse(filename).name] = path.resolve(root, filename)
   ))
 
   return config

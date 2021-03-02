@@ -7,10 +7,14 @@ import { AWSProvider } from './provider/AWSProvider'
 export const build = (root: string, account: string) => {
   const config = generateConfig(root, 'dist', new AWSProvider(account))
   const compiler = webpack({ ...config })
+  compiler.run((error, stats) => {
+    if (error)
+      console.error('Webpack compilation failed', error)
 
-  console.log(config);
+    if (stats.hasErrors())
+      stats.compilation.getErrors().forEach(item => console.log(item.message))
 
-  compiler.run((error) => error && console.error('Webpack compilation failed', error))
+  })
 }
 
 function main() {
