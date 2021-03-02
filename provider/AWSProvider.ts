@@ -65,8 +65,6 @@ class AWSProvider extends BaseProvider {
       })
       .promise()
 
-    console.log(respApi.ApiEndpoint)
-
     await lambda
       .addPermission({
         FunctionName: params.FunctionName,
@@ -76,6 +74,8 @@ class AWSProvider extends BaseProvider {
         SourceArn: `arn:aws:execute-api:us-east-2:688157472274:${respApi.ApiId}/*/$default`,
       })
       .promise()
+
+    return respApi.ApiEndpoint
   }
 
   public async createOrUpdateFunction(functionName: string, content: Buffer) {
@@ -87,23 +87,28 @@ class AWSProvider extends BaseProvider {
       console.log(`Function ${functionName} updated`)
     } else {
       console.log(`Creating function ${functionName}... `)
-      await this.createFunction(functionName, content)
+      const url = await this.createFunction(functionName, content)
       console.log(`Function ${functionName} created`)
+      return url
     }
   }
 
   public async createOrUpdateFunctionList(functions: Record<string, Buffer>) {
     const existingFunctions = await this.listFunctions()
 
-    Promise.all(
-      Object.entries(functions).map(([functionName, content]) => {
+    const urls: Record<string, string> = {}
+
+    await Promise.all(
+      Object.entries(functions).map(async ([functionName, content]) => {
         if (functionName in existingFunctions) {
-          return this.updateFunction(functionName, content)
+          this.updateFunction(functionName, content)
         }
 
-        return this.createFunction(functionName, content)
+        urls[functionName] = await this.createFunction(functionName, content)
       })
     )
+
+    return urls
   }
 }
 
