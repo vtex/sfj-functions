@@ -49,7 +49,7 @@ function afterEmit(root, functions, provider) {
               return
             }
 
-            const functionName = path.parse(item.filename).name
+            const functionName = `sfj-${path.parse(item.filename).name}`
 
             return [
               functionName,

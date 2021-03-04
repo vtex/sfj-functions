@@ -2,9 +2,18 @@ import { BaseProvider } from './BaseProvider'
 import AWS from 'aws-sdk'
 
 class AWSProvider extends BaseProvider {
+  private accountId: string
+  private region: string
+
   public constructor(account: string) {
-    AWS.config.update({ region: 'us-east-2' })
     super(account)
+    this.region = 'us-east-2'
+    AWS.config.update({ region: this.region })
+  }
+
+  public async getAccountId() {
+    const identity = await (new AWS.STS()).getCallerIdentity().promise()
+    this.accountId = identity.Account
   }
 
   public async listFunctions() {
@@ -34,6 +43,10 @@ class AWSProvider extends BaseProvider {
   }
 
   private async createFunction(functionName: string, content: Buffer) {
+    if (this.accountId === undefined) {
+      throw new Error('Account ID is undefined')
+    }
+
     const lambda = new AWS.Lambda()
 
     const params = {
@@ -44,7 +57,7 @@ class AWSProvider extends BaseProvider {
       FunctionName: functionName,
       Handler: 'index.handler',
       Publish: true,
-      Role: 'arn:aws:iam::688157472274:role/lambda-ex',
+      Role: `arn:aws:iam::${this.accountId}:role/sfj-functions`,
       Runtime: 'nodejs12.x',
       Timeout: 15,
       TracingConfig: {
@@ -71,7 +84,7 @@ class AWSProvider extends BaseProvider {
         StatementId: 'random-string',
         Action: 'lambda:InvokeFunction',
         Principal: 'apigateway.amazonaws.com',
-        SourceArn: `arn:aws:execute-api:us-east-2:688157472274:${respApi.ApiId}/*/$default`,
+        SourceArn: `arn:aws:execute-api:us-east-2:${this.accountId}:${respApi.ApiId}/*/$default`,
       })
       .promise()
 
