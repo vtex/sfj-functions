@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "target": "ES5"
   },
   "include": ["**/*"],
   "exclude": ["**/*.test.ts", "**/__tests__"]

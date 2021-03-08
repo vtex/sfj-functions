@@ -2,18 +2,24 @@ import { BaseProvider } from './BaseProvider'
 import AWS from 'aws-sdk'
 
 class AWSProvider extends BaseProvider {
-  private accountId: string
+  private _accountId: Promise<string>
   private region: string
+  private storeAccount: string
+  private awsResource: string
 
-  public constructor(account: string) {
-    super(account)
+  public constructor(storeAccount: string) {
+    super(storeAccount)
+    this.storeAccount = storeAccount
     this.region = 'us-east-2'
+    this.awsResource = 'service-role/any'
     AWS.config.update({ region: this.region })
   }
 
-  public async getAccountId() {
-    const identity = await (new AWS.STS()).getCallerIdentity().promise()
-    this.accountId = identity.Account
+  get accountId(): Promise<string> {
+    if (this._accountId === undefined)
+      this._accountId = ((new AWS.STS()).getCallerIdentity().promise()).then(x => x.Account)
+
+    return this._accountId
   }
 
   public async listFunctions() {
@@ -43,10 +49,6 @@ class AWSProvider extends BaseProvider {
   }
 
   private async createFunction(functionName: string, content: Buffer) {
-    if (this.accountId === undefined) {
-      throw new Error('Account ID is undefined')
-    }
-
     const lambda = new AWS.Lambda()
 
     const params = {
@@ -57,7 +59,7 @@ class AWSProvider extends BaseProvider {
       FunctionName: functionName,
       Handler: 'index.handler',
       Publish: true,
-      Role: `arn:aws:iam::${this.accountId}:role/sfj-functions`,
+      Role: `arn:aws:iam::${await this.accountId}:role/${this.awsResource}`,
       Runtime: 'nodejs12.x',
       Timeout: 15,
       TracingConfig: {
@@ -65,28 +67,35 @@ class AWSProvider extends BaseProvider {
       },
     }
 
-    const apigateway = new AWS.ApiGatewayV2()
+
+    console.log('creating function with role:', params.Role)
 
     const functionResp = await lambda.createFunction(params).promise()
 
+    const apigateway = new AWS.ApiGatewayV2()
+
     const respApi = await apigateway
       .createApi({
-        Name: `${this.account}-api-gateway-v2-${functionName}`,
+        Name: `${this.storeAccount}-api-gateway-v2-${functionName}`,
         ProtocolType: 'HTTP',
         Target: functionResp.FunctionArn,
         RouteKey: '$default',
       })
       .promise()
 
-    await lambda
-      .addPermission({
-        FunctionName: params.FunctionName,
-        StatementId: 'random-string',
-        Action: 'lambda:InvokeFunction',
-        Principal: 'apigateway.amazonaws.com',
-        SourceArn: `arn:aws:execute-api:us-east-2:${this.accountId}:${respApi.ApiId}/*/$default`,
-      })
-      .promise()
+    console.log('creating API Gateway V2: ', `${this.storeAccount}-api-gateway-v2-${functionName}`)
+    console.log('function ARN', functionResp.FunctionArn)
+    console.log('functions endpoint', respApi.ApiEndpoint)
+
+    // await lambda
+    //   .addPermission({
+    //     FunctionName: params.FunctionName,
+    //     StatementId: 'random-string',
+    //     Action: 'lambda:InvokeFunction',
+    //     Principal: 'apigateway.amazonaws.com',
+    //     SourceArn: `arn:aws:execute-api:${this.region}:${await this.accountId}:${respApi.ApiId}/*/$default`,
+    //   })
+    //   .promise()
 
     return respApi.ApiEndpoint
   }
