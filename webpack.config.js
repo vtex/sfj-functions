@@ -1,6 +1,8 @@
 const ZipPlugin = require('zip-webpack-plugin')
 const path = require('path')
 const glob = require('glob')
+const fs = require('fs')
+const { REDIRECTS_FILE } = require('constants')
 
 module.exports.generateConfig = (root, distDir, provider) => {
   const functions = []
@@ -38,21 +40,39 @@ function collectFunctions(functions) {
   }
 }
 
+/** Deploy functions to provider and return an Object with the endpoints */
+function deployFunctions(functions, provider) {
+  return functions.map(async (item) => {
+    if (!item.filename.endsWith('.zip')) {
+      return
+    }
+
+    const functionName = path.parse(item.filename).name
+
+    return [
+      functionName,
+      await provider.createOrUpdateFunction(functionName, item.content),
+    ]
+  }).then(urls => {
+    // Convert [[functionName, url], ...] to {functionName: url, ...}
+    return urls
+      .filter(item => item && item[1] !== undefined)
+      .reduce((acc, curr) => ({...acc, [curr[0]]: curr[1]}), {})
+  })
+}
+
 function afterEmit(root, functions, provider) {
   return {
     apply: (compiler) => {
       compiler.hooks.afterEmit.tap('Functions Deployment', async () => {
-        Promise.all(
-          functions.map((item) =>
-            item.filename.endsWith('.zip') && provider.createOrUpdateFunction(path.parse(item.filename).name, item.content).catch((x) => console.error(x))
-          )
-        ).then(() => {
-          const redirects = {}
-          // compilation.entrypoints.forEach((_, key) => (redirect[filename] = createRedirect(filename)))
-          // fs.writeFileSync(resolve(root, 'public', 'functions-redirects.json', `${JSON.stringify(redirects)}\n`)
-        })
+        const urls = await Promise.all(deployFunctions(functions, provider))
+
+        fs.writeFileSync(
+          path.resolve(root, REDIRECTS_FILE),
+          `${JSON.stringify(functionsURLs)}\n`
+        )
       })
-    },
+    }
   }
 }
 

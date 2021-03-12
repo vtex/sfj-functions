@@ -8,12 +8,13 @@ export const build = (root: string, account: string) => {
   const config = generateConfig(root, 'dist', new AWSProvider(account))
   const compiler = webpack({ ...config })
   compiler.run((error, stats) => {
-    if (error)
+    if (error) {
       console.error('Webpack compilation failed', error)
+    }
 
-    if (stats.hasErrors())
+    if (stats.hasErrors()) {
       stats.compilation.getErrors().forEach(item => console.log(item.message))
-
+    }
   })
 }
 
