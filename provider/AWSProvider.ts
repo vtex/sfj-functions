@@ -143,6 +143,10 @@ class AWSProvider extends BaseProvider {
       TracingConfig: {
         Mode: 'Active',
       },
+      Tags: {
+        Product: 'storeframework-function',
+        Team: 'StoreFramework',
+      }
     }
 
     console.log('creating function with role:', params.Role)
