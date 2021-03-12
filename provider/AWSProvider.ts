@@ -85,8 +85,8 @@ class AWSProvider extends BaseProvider {
    * @param {Buffer} file
    */
   private functionHash(file: Buffer) {
-    const shaObj = new jsSHA('SHA-224', 'BYTES');
-    shaObj.update(file.toString())
+    const shaObj = new jsSHA('SHA-224', 'ARRAYBUFFER');
+    shaObj.update(file)
     return shaObj.getHash('HEX')
   }
 
@@ -193,13 +193,11 @@ class AWSProvider extends BaseProvider {
 
     if (hash in existingFunctions) {
       console.log(`Updating function ${functionName}`)
-      console.log('Function hash', hash)
       await this.updateFunction(hash, content)
       console.log(`Function ${functionName} updated`)
     } else {
       console.log(`Creating function ${functionName}... `)
       const url = await this.createFunction(functionName, hash, content)
-      console.log('Function hash', hash)
       console.log(`Function ${functionName} created`)
       return url
     }
