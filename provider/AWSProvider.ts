@@ -1,5 +1,6 @@
 import { BaseProvider } from './BaseProvider'
 import AWS from 'aws-sdk'
+import jsSHA from 'jssha'
 
 class AWSProvider extends BaseProvider {
   private _accountId: Promise<string>
@@ -11,7 +12,8 @@ class AWSProvider extends BaseProvider {
     super(storeAccount)
     this.storeAccount = storeAccount
     this.region = 'us-east-2'
-    this.awsResource = 'service-role/any'
+    // this.awsResource = 'service-role/any'
+    this.awsResource = 'lambda-ex'
     AWS.config.update({ region: this.region })
   }
 
@@ -22,6 +24,12 @@ class AWSProvider extends BaseProvider {
     return this._accountId
   }
 
+  private functionHash(file: Buffer) {
+    const shaObj = new jsSHA('SHA-224', 'BYTES');
+    shaObj.update(file.toString())
+    return shaObj.getHash('HEX')
+  }
+
   public async listFunctions() {
     const lambda = new AWS.Lambda()
     const functions = await lambda.listFunctions().promise()
@@ -29,16 +37,17 @@ class AWSProvider extends BaseProvider {
 
     functions?.Functions?.forEach((item) => {
       if (item.FunctionName && item.Handler) {
-        functionsObj[item.FunctionName] = { ...item, url: item.Handler }
+        if (item.FunctionName.startsWith('sfj-'))
+          functionsObj[item.FunctionName.substring(4)] = { ...item, url: item.Handler }
       }
     })
 
     return functionsObj
   }
 
-  private async updateFunction(functionName: string, content: Buffer) {
+  private async updateFunction(functionHash: string, content: Buffer) {
     const params = {
-      FunctionName: functionName,
+      FunctionName: `sfj-${functionHash}`,
       ZipFile: content,
       Publish: true,
     }
@@ -48,7 +57,7 @@ class AWSProvider extends BaseProvider {
     await lambda.updateFunctionCode(params).promise()
   }
 
-  private async createFunction(functionName: string, content: Buffer) {
+  private async createFunction(functionName: string, functionHash: string, content: Buffer) {
     const lambda = new AWS.Lambda()
 
     const params = {
@@ -56,7 +65,7 @@ class AWSProvider extends BaseProvider {
         ZipFile: content,
       },
       Description: `StoreFramework Function - ${functionName}`,
-      FunctionName: functionName,
+      FunctionName: `sfj-${functionHash}`,
       Handler: 'index.handler',
       Publish: true,
       Role: `arn:aws:iam::${await this.accountId}:role/${this.awsResource}`,
@@ -65,8 +74,11 @@ class AWSProvider extends BaseProvider {
       TracingConfig: {
         Mode: 'Active',
       },
+      Tags: {
+        Product: 'storeframework-function',
+        Team: 'StoreFramework',
+      }
     }
-
 
     console.log('creating function with role:', params.Role)
 
@@ -103,13 +115,17 @@ class AWSProvider extends BaseProvider {
   public async createOrUpdateFunction(functionName: string, content: Buffer) {
     const existingFunctions = await this.listFunctions()
 
-    if (functionName in existingFunctions) {
+    const hash = this.functionHash(content)
+
+    if (hash in existingFunctions) {
       console.log(`Updating function ${functionName}`)
-      await this.updateFunction(functionName, content)
+      console.log('Function hash', hash)
+      await this.updateFunction(hash, content)
       console.log(`Function ${functionName} updated`)
     } else {
       console.log(`Creating function ${functionName}... `)
-      const url = await this.createFunction(functionName, content)
+      const url = await this.createFunction(functionName, hash, content)
+      console.log('Function hash', hash)
       console.log(`Function ${functionName} created`)
       return url
     }
@@ -122,11 +138,13 @@ class AWSProvider extends BaseProvider {
 
     await Promise.all(
       Object.entries(functions).map(async ([functionName, content]) => {
+        const functionHash = this.functionHash(content)
+
         if (functionName in existingFunctions) {
-          this.updateFunction(functionName, content)
+          this.updateFunction(functionHash, content)
         }
 
-        urls[functionName] = await this.createFunction(functionName, content)
+        urls[functionName] = await this.createFunction(functionName, functionHash, content)
       })
     )
 
