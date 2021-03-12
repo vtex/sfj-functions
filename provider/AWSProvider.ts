@@ -87,15 +87,15 @@ class AWSProvider extends BaseProvider {
     console.log('function ARN', functionResp.FunctionArn)
     console.log('functions endpoint', respApi.ApiEndpoint)
 
-    // await lambda
-    //   .addPermission({
-    //     FunctionName: params.FunctionName,
-    //     StatementId: 'random-string',
-    //     Action: 'lambda:InvokeFunction',
-    //     Principal: 'apigateway.amazonaws.com',
-    //     SourceArn: `arn:aws:execute-api:${this.region}:${await this.accountId}:${respApi.ApiId}/*/$default`,
-    //   })
-    //   .promise()
+    await lambda
+      .addPermission({
+        FunctionName: params.FunctionName,
+        StatementId: 'random-string',
+        Action: 'lambda:InvokeFunction',
+        Principal: 'apigateway.amazonaws.com',
+        SourceArn: `arn:aws:execute-api:${this.region}:${await this.accountId}:${respApi.ApiId}/*/$default`,
+      })
+      .promise()
 
     return respApi.ApiEndpoint
   }
