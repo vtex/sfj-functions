@@ -7,9 +7,5 @@ export abstract class BaseProvider {
     this.account = account
   }
 
-  public abstract createOrUpdateFunction(functionName: string, content: Buffer): Promise<string | undefined>
-
-  public abstract createOrUpdateFunctionList(functions: Record<string, Buffer>): Promise<Record<string, string> | void>
-
-  public abstract listFunctions(): Promise<Functions>
+  public abstract getOrCreateFunction(functionName: string, content: Buffer): Promise<string | undefined>
 }
