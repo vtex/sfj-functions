@@ -2,8 +2,10 @@
   "compilerOptions": {
     "esModuleInterop": true,
     "target": "ES5",
-    "outDir": "build/"
+    "outDir": "dist/",
+    "allowJs": true
   },
   "include": ["**/*"],
-  "exclude": ["**/*.test.ts", "**/__tests__"]
+  "exclude": ["**/*.test.ts", "**/__tests__", "./dist"],
+  "allowJs": true
 }
