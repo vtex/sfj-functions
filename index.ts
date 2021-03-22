@@ -12,7 +12,7 @@ export const build = (root: string, account: string) => {
       console.error('Webpack compilation failed', error)
     }
 
-    if (stats.hasErrors()) {
+    if (stats?.hasErrors()) {
       stats.compilation.getErrors().forEach(item => console.log(item.message))
     }
   })
