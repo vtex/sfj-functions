@@ -1,11 +1,10 @@
-const ZipPlugin = require('zip-webpack-plugin')
 const path = require('path')
 const glob = require('glob')
 const fs = require('fs')
 const { REDIRECTS_FILE } = require('./constants')
 
 module.exports.generateConfig = (root, distDir, provider) => {
-  const functions = []
+  const functions = {}
   const config = mainConfig(root, distDir)
 
   return {
@@ -13,19 +12,6 @@ module.exports.generateConfig = (root, distDir, provider) => {
     plugins: [
       collectFunctions(functions),
       afterEmit(root, functions, provider),
-      ...Object.keys(config.entry).map((entryName) => {
-        const zipConfig = {
-          path: path.resolve(root, distDir),
-          filename: entryName,
-          extension: 'zip',
-          include: [`${entryName}/index.js`],
-          pathMapper(assetPath) {
-            return path.basename(assetPath)
-          },
-        }
-
-        return new ZipPlugin(zipConfig)
-      }),
     ],
   }
 }
@@ -34,39 +20,32 @@ function collectFunctions(functions) {
   return {
     apply: (compiler) => {
       compiler.hooks.assetEmitted.tap('Functions Collector', (filename, info) => {
-        functions.push({ filename, content: info.content })
+        functions[filename] = info.content
       })
     },
   }
 }
 
-/** Deploy functions to provider and return an Object with the endpoints */
-function deployFunctions(functions, provider) {
-  console.log(functions);
-  functions.map(async (item) => {
-    if (!item.filename.endsWith('.zip')) {
-      return
-    }
+/** Deploy functions to provider and return an Object with function and endpoints */
+async function deployFunctions(functions, provider) {
+  const urls = {}
 
-    const functionName = path.parse(item.filename).name
+  await Promise.all(Object.entries(functions).map(async ([functionPath, content]) => {
+    const functionName = path.parse(path.join(functionPath, '..')).name
 
-    return [
-      functionName,
-      await provider.getOrCreateFunction(functionName, item.content),
-    ]
-  }).then(urls => {
-    // Convert [[functionName, url], ...] to {functionName: url, ...}
-    return urls
-      .filter(item => item && item[1] !== undefined)
-      .reduce((acc, curr) => ({...acc, [curr[0]]: curr[1]}), {})
-  }).catch(error => console.error(error))
+    urls[functionName] = await provider.getOrCreateFunction(functionName, content)
+    console.log('aqui');
+  }))
+
+  return urls
 }
 
 function afterEmit(root, functions, provider) {
   return {
     apply: (compiler) => {
       compiler.hooks.afterEmit.tap('Functions Deployment', async () => {
-        const urls = await Promise.all(deployFunctions(functions, provider))
+        const urls = await deployFunctions(functions, provider)
+        console.log('urls:', urls);
 
         fs.writeFileSync(
           path.resolve(root, REDIRECTS_FILE),
