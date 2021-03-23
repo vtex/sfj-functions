@@ -25,7 +25,7 @@ class AWSProvider extends BaseProvider {
    * Creates or update a function, based on its contents hash
    * @param {string} functionName Name used on the API Gateway URL route
    * @param {Buffer} content Function code
-   * @returns {string} The final URL used to invoke the function
+   * @returns The final URL used to invoke the function
    */
   public async getOrCreateFunction(functionName: string, content: Buffer) {
     const hash = hashFunction(content)
@@ -33,7 +33,7 @@ class AWSProvider extends BaseProvider {
 
     const lambdaArn = await getOrCreateLambda({
       accountId: await this.accountId,
-      content,
+      content: await this.zipFunction(content),
       functionName,
       hash,
     })
@@ -46,7 +46,7 @@ class AWSProvider extends BaseProvider {
       storeAccount: this.storeAccount,
     })
 
-    return getFunctionURL(integrationId, AWS_REGION, functionName)
+    return getFunctionURL(integrationId, AWS_REGION, hash)
   }
 
   /**
