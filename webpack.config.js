@@ -82,7 +82,7 @@ function mainConfig(root, distDir) {
       libraryTarget: 'umd',
     },
     target: 'node',
-    mode: 'development',
+    mode: 'production',
     optimization: {
       usedExports: false,
     },
