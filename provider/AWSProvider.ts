@@ -126,7 +126,6 @@ class AWSProvider extends BaseProvider {
    * @param {Buffer} content Function code
    */
   private async createFunction(functionName: string, functionHash: string, content: Buffer) {
-    this.createFunction
     const lambda = new AWS.Lambda()
 
     const params = {
