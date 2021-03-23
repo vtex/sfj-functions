@@ -59,7 +59,7 @@ class AWSProvider extends BaseProvider {
     return (async () => {
       const s3 = new AWS.S3()
 
-      return await s3.getObject({
+      return s3.getObject({
         Bucket: 'sfj-functions',
         Key: this.storeAccount,
       }).promise()
