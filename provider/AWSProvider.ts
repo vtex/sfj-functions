@@ -1,13 +1,19 @@
 import { BaseProvider } from './BaseProvider'
-import AWS from 'aws-sdk'
+import AWS, { AWSError } from 'aws-sdk'
 import jsSHA from 'jssha'
 
+/** Implements the AWS provider for serverless functions */
 class AWSProvider extends BaseProvider {
   private _accountId: Promise<string>
+  private _apiGatewayId: Promise<string>
   private region: string
   private storeAccount: string
   private awsResource: string
 
+  /**
+   * Create an AWS provider
+   * @param {string} storeAccount The store's account
+   */
   public constructor(storeAccount: string) {
     super(storeAccount)
     this.storeAccount = storeAccount
@@ -17,6 +23,10 @@ class AWSProvider extends BaseProvider {
     AWS.config.update({ region: this.region })
   }
 
+  /**
+   * Retrieves the AWS Account ID based on caller's identity
+   * @returns {Promise<string>} The account id
+   */
   get accountId(): Promise<string> {
     if (this._accountId === undefined)
       this._accountId = ((new AWS.STS()).getCallerIdentity().promise()).then(x => x.Account)
@@ -24,12 +34,63 @@ class AWSProvider extends BaseProvider {
     return this._accountId
   }
 
+  /** Creates an API Gateway V2 for the store */
+  private async createApiGateway() {
+    const apiGateway = new AWS.ApiGatewayV2()
+
+    const gateway = await apiGateway.createApi({
+      Name: `sfj-${this.storeAccount}`,
+      ProtocolType: "HTTP",
+    }).promise()
+
+    return gateway.ApiId
+  }
+
+  /**
+   * Retrieves from S3 the API Gateway ID for the store, creating it if needed.
+   * @returns {Promise<string>} The API Gateway ID
+   * @throws {Promise<AWSError>}
+   */
+  public get apiGatewayId(): Promise<string | AWSError> {
+    if (this._apiGatewayId !== undefined) {
+      this._apiGatewayId
+    }
+
+    return (async () => {
+      const s3 = new AWS.S3()
+
+      return s3.getObject({
+        Bucket: 'sfj-functions',
+        Key: this.storeAccount,
+      }).promise()
+        .then(obj => JSON.parse(obj.Body?.toString()).apiGateway)
+        .catch(async (error) => {
+          if (error.statusCode === 404) {
+            const apiGateway = await this.createApiGateway()
+
+            await s3.putObject({
+              Bucket: 'sfj-functions',
+              Key: this.storeAccount,
+              Body: JSON.stringify({ apiGateway }),
+            }).promise()
+
+            return apiGateway
+          }
+        })
+    })()
+  }
+
+  /**
+   * Hashes the function code
+   * @param {Buffer} file
+   */
   private functionHash(file: Buffer) {
     const shaObj = new jsSHA('SHA-224', 'BYTES');
     shaObj.update(file.toString())
     return shaObj.getHash('HEX')
   }
 
+  /** List functions deployed to this store */
   public async listFunctions() {
     const lambda = new AWS.Lambda()
     const functions = await lambda.listFunctions().promise()
@@ -45,6 +106,7 @@ class AWSProvider extends BaseProvider {
     return functionsObj
   }
 
+  /** Updates the function code */
   private async updateFunction(functionHash: string, content: Buffer) {
     const params = {
       FunctionName: `sfj-${functionHash}`,
@@ -57,6 +119,12 @@ class AWSProvider extends BaseProvider {
     await lambda.updateFunctionCode(params).promise()
   }
 
+  /**
+   * Create a new Lambda function and setup a route on API Gateway
+   * @param {string} functionName Name used on the API Gateway URL route
+   * @param {string} functionHash Code's hash, unique per Lambda function
+   * @param {Buffer} content Function code
+   */
   private async createFunction(functionName: string, functionHash: string, content: Buffer) {
     const lambda = new AWS.Lambda()
 
@@ -112,6 +180,11 @@ class AWSProvider extends BaseProvider {
     return respApi.ApiEndpoint
   }
 
+  /**
+   * Creates or update a function, based on its contents hash
+   * @param {string} functionName Name used on the API Gateway URL route
+   * @param {Buffer} content Function code
+   */
   public async createOrUpdateFunction(functionName: string, content: Buffer) {
     const existingFunctions = await this.listFunctions()
 
@@ -131,6 +204,11 @@ class AWSProvider extends BaseProvider {
     }
   }
 
+  /**
+   * Creates or update multiple functions more efficiently
+   * @param {string} functionName Name used on the API Gateway URL route
+   * @param {Buffer} content Function code
+   */
   public async createOrUpdateFunctionList(functions: Record<string, Buffer>) {
     const existingFunctions = await this.listFunctions()
 
