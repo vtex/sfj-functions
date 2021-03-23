@@ -58,7 +58,7 @@ export const createLambda = async (params: LambdaParams) => {
     FunctionName: getLambdaName(params.hash),
     Handler: 'index.handler',
     Publish: true,
-    Role: getLambdaRole(AWS_ROLE_RESOURCE),
+    Role: getLambdaRole(params.accountId),
     Runtime: 'nodejs12.x',
     Timeout: 15,
     TracingConfig: {
