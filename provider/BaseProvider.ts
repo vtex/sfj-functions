@@ -1,3 +1,5 @@
+import yazl from 'yazl'
+
 export type Functions = Record<string, { url: string }>
 
 export abstract class BaseProvider {
@@ -7,9 +9,19 @@ export abstract class BaseProvider {
     this.account = account
   }
 
-  public abstract createOrUpdateFunction(functionName: string, content: Buffer): Promise<string | undefined>
+  public abstract getOrCreateFunction(functionName: string, content: Buffer): Promise<string | undefined>
 
-  public abstract createOrUpdateFunctionList(functions: Record<string, Buffer>): Promise<Record<string, string> | void>
+  public async zipFunction(content: Buffer): Promise<Buffer> {
+    const zipfile = new yazl.ZipFile()
+    zipfile.addBuffer(content, 'index.js')
 
-  public abstract listFunctions(): Promise<Functions>
+    return new Promise((resolve, reject) => {
+      const data = []
+
+      zipfile.outputStream.on('data', (chunk) => data.push(chunk))
+      zipfile.outputStream.on('end', () => resolve(Buffer.concat(data)))
+      zipfile.outputStream.on('error', (error) => reject(error))
+      zipfile.end()
+    })
+  }
 }

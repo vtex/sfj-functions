@@ -4,12 +4,14 @@
   "main": "index.js",
   "license": "MIT",
   "dependencies": {
+    "@types/yazl": "^2.4.2",
     "aws-sdk": "^2.853.0",
     "glob": "^7.1.6",
     "jssha": "^3.2.0",
     "ts-loader": "^8.0.17",
     "typescript": "^4.2.2",
     "webpack": "^5.24.2",
+    "yazl": "^2.5.1",
     "zip-webpack-plugin": "^4.0.1"
   },
   "scripts": {
@@ -18,10 +20,12 @@
     "test": "jest"
   },
   "bin": {
-    "sfj-functions": "./index.js"
+    "sfj-functions": "./dist/index.js"
   },
   "devDependencies": {
     "@types/jest": "^26.0.20",
+    "@typescript-eslint/eslint-plugin": "^4.18.0",
+    "@typescript-eslint/parser": "^4.18.0",
     "jest": "^26.6.3",
     "ts-jest": "^26.5.3"
   }

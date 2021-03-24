@@ -12,7 +12,7 @@ export const build = (root: string, account: string) => {
       console.error('Webpack compilation failed', error)
     }
 
-    if (stats.hasErrors()) {
+    if (stats?.hasErrors()) {
       stats.compilation.getErrors().forEach(item => console.log(item.message))
     }
   })
@@ -24,7 +24,7 @@ function main() {
   }
 
   if (process.argv.length != 4) {
-    console.error('USAGE: ./build.ts [projectRoot] [account]');
+    console.error('USAGE: sfj-functions [projectRoot] [account]');
     return
   }
 
