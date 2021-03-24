@@ -42,6 +42,8 @@ export const setupApiGateway = async (params: ApiGatewaySetupParams) => {
 
   await addRouteToApi(params.hash, gatewayId, newIntegration.IntegrationId)
 
+  await createStage(gatewayId)
+
   console.log('adding permissions');
   addLambdaPermissions(params.hash, params.accountId, gatewayId)
 
@@ -116,5 +118,15 @@ const createIntegration = (gatewayId: string, lambdaArn: string) => {
     IntegrationType: 'AWS_PROXY',
     IntegrationUri: lambdaArn,
     PayloadFormatVersion: '2.0',
+  }).promise()
+}
+
+const createStage = (gatewayId: string) => {
+  const apiGateway = new AWS.ApiGatewayV2()
+
+  return apiGateway.createStage({
+    ApiId: gatewayId,
+    StageName: '$default',
+    AutoDeploy: true,
   }).promise()
 }

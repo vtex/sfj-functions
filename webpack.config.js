@@ -34,7 +34,6 @@ async function deployFunctions(functions, provider) {
     const functionName = path.parse(path.join(functionPath, '..')).name
 
     urls[functionName] = await provider.getOrCreateFunction(functionName, content)
-    console.log('aqui');
   }))
 
   return urls
