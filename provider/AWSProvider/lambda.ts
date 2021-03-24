@@ -78,7 +78,7 @@ export const addLambdaPermissions = async (hash: string, accountId: string, gate
   return lambda
     .addPermission({
       FunctionName: getLambdaName(hash),
-      StatementId: hash,
+      StatementId: `${gatewayId}-${hash}`,
       Action: 'lambda:InvokeFunction',
       Principal: 'apigateway.amazonaws.com',
       SourceArn: getLambdaPermissionSourceArn(accountId, gatewayId),
