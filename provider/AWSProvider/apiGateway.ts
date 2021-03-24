@@ -20,6 +20,8 @@ export const setupApiGateway = async (params: ApiGatewaySetupParams) => {
   const gatewayId = await getOrCreateApiGateway(params.storeAccount)
 
   const apiGateway = new AWS.ApiGatewayV2()
+  // TODO: we are retrieving only the first page of integrations here,
+  // which doesn't scale.
   const integrations = await apiGateway.getIntegrations({
     ApiId: gatewayId,
   }).promise()
