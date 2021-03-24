@@ -58,7 +58,7 @@ export const createLambda = async (params: LambdaParams) => {
     FunctionName: getLambdaName(params.hash),
     Handler: 'index.handler',
     Publish: true,
-    Role: getLambdaRole(AWS_ROLE_RESOURCE),
+    Role: getLambdaRole(params.accountId),
     Runtime: 'nodejs12.x',
     Timeout: 15,
     TracingConfig: {
@@ -78,7 +78,7 @@ export const addLambdaPermissions = async (hash: string, accountId: string, gate
   return lambda
     .addPermission({
       FunctionName: getLambdaName(hash),
-      StatementId: hash,
+      StatementId: `${gatewayId}-${hash}`,
       Action: 'lambda:InvokeFunction',
       Principal: 'apigateway.amazonaws.com',
       SourceArn: getLambdaPermissionSourceArn(accountId, gatewayId),

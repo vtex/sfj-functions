@@ -30,20 +30,17 @@ export const setupApiGateway = async (params: ApiGatewaySetupParams) => {
     console.log('Integration for API exists', oldIntegration[0].IntegrationId)
     return {
       gatewayId,
-      integrationId: oldIntegration[0].IntegrationId }
+      integrationId: oldIntegration[0].IntegrationId
+    }
   }
 
-  console.log('Adding Integration for API')
-  const newIntegration = await apiGateway.createIntegration({
-    ApiId: gatewayId,
-    IntegrationType: 'AWS_PROXY',
-    IntegrationUri: params.lambdaArn,
-    PayloadFormatVersion: '2.0',
-  }).promise()
-  console.log(newIntegration)
+  console.log('creating integration');
+  const newIntegration = await createIntegration(gatewayId, params.lambdaArn)
+  console.log('creating route');
 
-  await addRouteToApi(params.functionName, gatewayId, newIntegration.IntegrationId)
+  await addRouteToApi(params.hash, gatewayId, newIntegration.IntegrationId)
 
+  console.log('adding permissions');
   addLambdaPermissions(params.hash, params.accountId, gatewayId)
 
   return {
@@ -83,20 +80,20 @@ const getOrCreateApiGateway = async (storeAccount: string): Promise<string> => {
   }
 }
 
-export const addRouteToApi = async (name: string, gatewayId: string, integrationId: string) => {
+export const addRouteToApi = async (path: string, gatewayId: string, integrationId: string) => {
   const apiGateway = new AWS.ApiGatewayV2()
 
   console.log('Adding route to API')
   const route = await apiGateway.createRoute({
     ApiId: gatewayId,
-    RouteKey: `ANY /${name}`,
+    RouteKey: `ANY /${path}`,
     Target: `integrations/${integrationId}`,
   }).promise()
   console.log(route)
 }
 
 /** Creates an API Gateway V2 for the store */
-export const createApiGateway = async (storeAccount: string) => {
+const createApiGateway = async (storeAccount: string) => {
   const apiGateway = new AWS.ApiGatewayV2()
 
   const gateway = await apiGateway.createApi({
@@ -107,4 +104,15 @@ export const createApiGateway = async (storeAccount: string) => {
   console.log(gateway.ApiId)
 
   return gateway.ApiId
+}
+
+const createIntegration = (gatewayId: string, lambdaArn: string) => {
+  const apiGateway = new AWS.ApiGatewayV2()
+
+  return apiGateway.createIntegration({
+    ApiId: gatewayId,
+    IntegrationType: 'AWS_PROXY',
+    IntegrationUri: lambdaArn,
+    PayloadFormatVersion: '2.0',
+  }).promise()
 }
