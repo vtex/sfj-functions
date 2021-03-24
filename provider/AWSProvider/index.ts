@@ -38,7 +38,7 @@ class AWSProvider extends BaseProvider {
       hash,
     })
 
-    const { integrationId } = await setupApiGateway({
+    const { gatewayId } = await setupApiGateway({
       accountId: await this.accountId,
       functionName,
       hash,
@@ -46,7 +46,7 @@ class AWSProvider extends BaseProvider {
       storeAccount: this.storeAccount,
     })
 
-    return getFunctionURL(integrationId, AWS_REGION, hash)
+    return getFunctionURL(gatewayId, AWS_REGION, hash)
   }
 
   /**
