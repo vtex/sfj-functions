@@ -18,6 +18,7 @@ class AWSProvider extends BaseProvider {
   public constructor(storeAccount: string) {
     super(storeAccount)
     this.storeAccount = storeAccount
+    this._accountId = new Promise(resolve => resolve('558830342743'))
     AWS.config.update({ region: AWS_REGION })
   }
 
@@ -31,12 +32,16 @@ class AWSProvider extends BaseProvider {
     const hash = hashFunction(content)
     console.log(`Function ${functionName} hash: ${hash}`)
 
+    console.log('Getting or creating lambda');
+
     const lambdaArn = await getOrCreateLambda({
       accountId: await this.accountId,
       content: await this.zipFunction(content),
       functionName,
       hash,
     })
+
+    console.log('Setting up api gateway');
 
     const { gatewayId } = await setupApiGateway({
       accountId: await this.accountId,

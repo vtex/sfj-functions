@@ -1,5 +1,6 @@
 import AWS from 'aws-sdk'
 import { addLambdaPermissions } from './lambda'
+import { S3_BUCKET } from '../../constants'
 
 export interface ApiGatewaySetupParams {
   accountId: string
@@ -22,6 +23,7 @@ export const setupApiGateway = async (params: ApiGatewaySetupParams) => {
   const apiGateway = new AWS.ApiGatewayV2()
   // TODO: we are retrieving only the first page of integrations here,
   // which doesn't scale.
+  console.log('Trying to get integrations');
   const integrations = await apiGateway.getIntegrations({
     ApiId: gatewayId,
   }).promise()
@@ -62,7 +64,7 @@ const getOrCreateApiGateway = async (storeAccount: string): Promise<string> => {
 
   try {
     const store = await s3.getObject({
-      Bucket: 'sfj-functions',
+      Bucket: S3_BUCKET,
       Key: storeAccount,
     }).promise()
 
@@ -75,7 +77,7 @@ const getOrCreateApiGateway = async (storeAccount: string): Promise<string> => {
       const apiGateway = await createApiGateway(storeAccount)
 
       await s3.putObject({
-        Bucket: 'sfj-functions',
+        Bucket: S3_BUCKET,
         Key: storeAccount,
         Body: JSON.stringify({ apiGateway }),
       }).promise()
